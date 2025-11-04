@@ -39,7 +39,7 @@ pipeline {
         stage('Push to DockerHub') {
             steps {
                 echo '📤 Pushing image to DockerHub...'
-                withCredentials([usernamePassword(credentialsId: 'jenkins', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         eval $(minikube -p minikube docker-env)
                         docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${FULL_IMAGE_NAME}
