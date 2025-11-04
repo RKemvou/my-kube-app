@@ -2,8 +2,11 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'redis-producer'
-        IMAGE_TAG = 'v1'
+        IMAGE_NAME = "redis-producer"
+        IMAGE_TAG = "v1"
+        DOCKERHUB_USER = "kemvouachille"
+        DOCKER_USER = credentials('docker-credentials-username') // Add this credential in Jenkins
+        DOCKER_PASS = credentials('docker-credentials-password') // Add this credential in Jenkins
     }
 
     stages {
@@ -26,7 +29,7 @@ pipeline {
 
         stage('Verify Docker Image') {
             steps {
-                echo "🔍 Verifying Docker image exists..."
+                echo '🔍 Verifying Docker image exists...'
                 sh '''
                     eval $(minikube -p minikube docker-env)
                     docker images | grep ${IMAGE_NAME}
@@ -37,12 +40,15 @@ pipeline {
         stage('Push to DockerHub') {
             steps {
                 echo '📤 Pushing image to DockerHub...'
-                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                withCredentials([
+                    string(credentialsId: 'docker-credentials-username', variable: 'DOCKER_USER'),
+                    string(credentialsId: 'docker-credentials-password', variable: 'DOCKER_PASS')
+                ]) {
                     sh '''
                         eval $(minikube -p minikube docker-env)
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                     '''
                 }
             }
@@ -53,16 +59,17 @@ pipeline {
                 echo '🚀 Deploying to Minikube...'
                 sh '''
                     eval $(minikube -p minikube docker-env)
-                    kubectl apply -f deployment.yaml
+                    kubectl apply -f k8s/
                 '''
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                echo '🔍 Verifying deployment...'
+                echo '✅ Verifying Kubernetes deployment...'
                 sh '''
                     kubectl get pods
+                    kubectl get svc
                 '''
             }
         }
@@ -71,6 +78,9 @@ pipeline {
     post {
         failure {
             echo '❌ Jenkins pipeline failed. Please review the logs above.'
+        }
+        success {
+            echo '✅ Jenkins pipeline completed successfully!'
         }
     }
 }
