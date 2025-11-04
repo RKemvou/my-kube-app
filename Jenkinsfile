@@ -8,9 +8,13 @@ pipeline {
     }
 
     stages {
+
+        // -----------------------------
+        // Stage 1: Build Docker Image
+        // -----------------------------
         stage('Build Docker Image') {
             steps {
-                echo "🔨 Building Docker image for ${IMAGE_NAME}:${IMAGE_TAG}..."
+                echo "🔨 Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
                 sh '''
                     eval $(minikube -p minikube docker-env)
                     docker build -t ${IMAGE_NAME}:${IMAGE_TAG} .
@@ -18,9 +22,12 @@ pipeline {
             }
         }
 
+        // -----------------------------
+        // Stage 2: Verify Docker Image
+        // -----------------------------
         stage('Verify Docker Image') {
             steps {
-                echo '🔍 Listing Docker images to verify build...'
+                echo '🔍 Listing Docker images to confirm build...'
                 sh '''
                     eval $(minikube -p minikube docker-env)
                     docker images | grep ${IMAGE_NAME}
@@ -28,9 +35,12 @@ pipeline {
             }
         }
 
+        // -----------------------------
+        // Stage 3: Deploy to Minikube
+        // -----------------------------
         stage('Deploy to Minikube') {
             steps {
-                echo '🚀 Applying Kubernetes manifests from ./k8s/'
+                echo '🚀 Deploying to Kubernetes via kubectl apply...'
                 sh '''
                     kubectl apply -f k8s/namespace.yaml
                     kubectl apply -f k8s/configmap.yaml -n ${KUBE_NAMESPACE}
@@ -42,9 +52,12 @@ pipeline {
             }
         }
 
+        // -----------------------------
+        // Stage 4: Verify Deployment
+        // -----------------------------
         stage('Verify Deployment') {
             steps {
-                echo '🔎 Verifying Kubernetes deployment...'
+                echo '🔎 Verifying pod and service status...'
                 sh '''
                     kubectl get pods -n ${KUBE_NAMESPACE} -o wide
                     kubectl get svc -n ${KUBE_NAMESPACE}
@@ -52,20 +65,23 @@ pipeline {
             }
         }
 
+        // -----------------------------
+        // Stage 5: Smoke Test
+        // -----------------------------
         stage('Run Smoke Test') {
             steps {
-                echo '🧪 Running smoke test on deployed service...'
+                echo '🧪 Running smoke test...'
                 sh './test.sh'
             }
         }
     }
 
     post {
-        failure {
-            echo '❌ Pipeline failed. Check the logs above.'
-        }
         success {
-            echo '✅ Pipeline completed successfully!'
+            echo '✅ Jenkins pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Jenkins pipeline failed. Please review the logs above.'
         }
     }
 }
