@@ -4,8 +4,6 @@ pipeline {
     environment {
         IMAGE_NAME = 'redis-producer'
         IMAGE_TAG = 'v1'
-        DOCKERHUB_USER = 'kemvouachille'
-        KUBE_NAMESPACE = 'my-kube-namespace'
     }
 
     stages {
@@ -28,7 +26,7 @@ pipeline {
 
         stage('Verify Docker Image') {
             steps {
-                echo '🔍 Verifying Docker image exists...'
+                echo "🔍 Verifying Docker image exists..."
                 sh '''
                     eval $(minikube -p minikube docker-env)
                     docker images | grep ${IMAGE_NAME}
@@ -42,9 +40,9 @@ pipeline {
                 withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         eval $(minikube -p minikube docker-env)
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                     '''
                 }
             }
@@ -54,17 +52,17 @@ pipeline {
             steps {
                 echo '🚀 Deploying to Minikube...'
                 sh '''
-                    kubectl apply -n ${KUBE_NAMESPACE} -f k8s/
+                    eval $(minikube -p minikube docker-env)
+                    kubectl apply -f deployment.yaml
                 '''
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                echo '🔎 Verifying Kubernetes deployment...'
+                echo '🔍 Verifying deployment...'
                 sh '''
-                    kubectl get pods -n ${KUBE_NAMESPACE} -o wide
-                    kubectl get svc -n ${KUBE_NAMESPACE}
+                    kubectl get pods
                 '''
             }
         }
@@ -73,9 +71,6 @@ pipeline {
     post {
         failure {
             echo '❌ Jenkins pipeline failed. Please review the logs above.'
-        }
-        success {
-            echo '✅ Jenkins pipeline completed successfully!'
         }
     }
 }
