@@ -1,4 +1,4 @@
-pipeline {
+[200~pipeline {
     agent any
 
     environment {
@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Build Docker Image') {
             steps {
-                echo "🔥 Building Docker image..."
+                echo "🔨 Building Docker image for $IMAGE_NAME..."
                 sh '''
                     eval $(minikube docker-env)
                     docker build -t $IMAGE_NAME:$IMAGE_TAG .
@@ -20,7 +20,7 @@ pipeline {
 
         stage('Verify Docker Image') {
             steps {
-                echo "📦 Verifying Docker image..."
+                echo "🔍 Listing Docker images to verify build..."
                 sh '''
                     eval $(minikube docker-env)
                     docker images | grep $IMAGE_NAME
@@ -28,18 +28,20 @@ pipeline {
             }
         }
 
-        stage('Apply Kubernetes YAMLs') {
+        stage('Deploy to Minikube') {
             steps {
-                echo "🚀 Deploying to Minikube..."
+                echo "🚀 Applying Kubernetes manifests from ./k8s/"
                 sh 'kubectl apply -f k8s/'
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                echo "🔍 Checking Kubernetes resources..."
+                echo "🔎 Checking Pods and Services in the cluster..."
                 sh '''
+                    echo "--- Pods ---"
                     kubectl get pods -o wide
+                    echo "--- Services ---"
                     kubectl get svc
                 '''
             }
@@ -48,10 +50,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Deployment successful!'
+            echo '✅ Pipeline completed successfully!'
         }
         failure {
-            echo '❌ Something went wrong!'
+            echo '❌ Pipeline failed. Check the logs above.'
         }
     }
 }
