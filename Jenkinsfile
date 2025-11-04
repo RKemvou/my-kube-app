@@ -4,6 +4,8 @@ pipeline {
     environment {
         IMAGE_NAME = "redis-producer"
         IMAGE_TAG = "v1"
+        DOCKERHUB_USERNAME = "your-dockerhub-username"
+        DOCKERHUB_IMAGE = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
         KUBE_NAMESPACE = "my-kube-namespace"
         SERVICE_URL = "http://192.168.49.2:30082"
     }
@@ -20,19 +22,23 @@ pipeline {
             }
         }
 
-        stage('Verify Docker Image') {
+        stage('Push to DockerHub') {
             steps {
-                echo '🔍 Listing Docker images to confirm build...'
-                sh '''
-                    eval $(minikube -p minikube docker-env)
-                    docker images | grep ${IMAGE_NAME}
-                '''
+                echo "📦 Pushing image to DockerHub: ${DOCKERHUB_IMAGE}"
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                        eval $(minikube -p minikube docker-env)
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${DOCKERHUB_IMAGE}
+                        echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                        docker push ${DOCKERHUB_IMAGE}
+                    '''
+                }
             }
         }
 
         stage('Deploy to Minikube') {
             steps {
-                echo '🚀 Deploying to Kubernetes via kubectl apply...'
+                echo '🚀 Deploying Kubernetes resources...'
                 sh '''
                     kubectl apply -f k8s/namespace.yaml
                     kubectl apply -f k8s/configmap.yaml -n ${KUBE_NAMESPACE}
@@ -46,7 +52,7 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                echo '🔎 Verifying pod and service status...'
+                echo '🔎 Verifying deployment...'
                 sh '''
                     kubectl get pods -n ${KUBE_NAMESPACE} -o wide
                     kubectl get svc -n ${KUBE_NAMESPACE}
@@ -58,9 +64,9 @@ pipeline {
             steps {
                 echo '🧪 Running smoke test...'
                 sh '''
-                    echo "🔍 Waiting for service to become available..."
+                    echo "Waiting for service to be ready..."
                     sleep 10
-                    echo "🔗 Testing endpoint: ${SERVICE_URL}"
+                    echo "Testing endpoint: ${SERVICE_URL}"
                     for i in {1..5}; do
                         curl --fail ${SERVICE_URL} && exit 0 || echo "Retry #$i failed..."; sleep 5;
                     done
@@ -73,10 +79,10 @@ pipeline {
 
     post {
         success {
-            echo '✅ Jenkins pipeline completed successfully!'
+            echo '✅ Pipeline completed successfully!'
         }
         failure {
-            echo '❌ Jenkins pipeline failed. Please review the logs above.'
+            echo '❌ Jenkins pipeline failed. Check logs.'
         }
     }
 }
