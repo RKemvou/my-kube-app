@@ -1,19 +1,19 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-kube-app
+  name: nginx-deployment
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: my-kube-app
+      app: nginx
   template:
     metadata:
       labels:
-        app: my-kube-app
+        app: nginx
     spec:
       containers:
-      - name: my-kube-app
+      - name: nginx
         image: nginx:alpine
         ports:
         - containerPort: 80

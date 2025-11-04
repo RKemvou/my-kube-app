@@ -1,9 +1,8 @@
 pipeline {
-    agent { label 'master' }
+    agent any
 
     environment {
-        // Path to your Minikube kubeconfig file
-        KUBECONFIG = '/root/.kube/config'
+        KUBECONFIG = "/home/jenkins/.kube/config"
     }
 
     stages {
@@ -16,6 +15,13 @@ pipeline {
         stage('Deploy to Minikube') {
             steps {
                 sh 'kubectl apply -f k8s/'
+            }
+        }
+
+        stage('Verify Deployment') {
+            steps {
+                sh 'kubectl get pods -o wide'
+                sh 'kubectl get svc'
             }
         }
     }
