@@ -1,0 +1,7 @@
+*.pyc
+__pycache__/
+k8s/
+.git/
+README.md
+Jenkinsfile
+
