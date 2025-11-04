@@ -1,11 +1,11 @@
 pipeline {
     agent any
-
     environment {
-        DOCKERHUB_USERNAME = 'kemvouachille'
         IMAGE_NAME = 'redis-producer'
         IMAGE_TAG = 'v1'
-        FULL_IMAGE_NAME = "${DOCKERHUB_USERNAME}/${IMAGE_NAME}:${IMAGE_TAG}"
+        DOCKERHUB_REPO = "kemvouachille/${IMAGE_NAME}:${IMAGE_TAG}"
+        KUBE_NAMESPACE = 'my-kube-namespace'
+        KUBECONFIG = "${env.HOME}/.kube/config"
     }
 
     stages {
@@ -28,7 +28,7 @@ pipeline {
 
         stage('Verify Docker Image') {
             steps {
-                echo '🔍 Verifying Docker image exists...'
+                echo "🔍 Verifying Docker image exists..."
                 sh '''
                     eval $(minikube -p minikube docker-env)
                     docker images | grep ${IMAGE_NAME}
@@ -38,13 +38,13 @@ pipeline {
 
         stage('Push to DockerHub') {
             steps {
-                echo '📤 Pushing image to DockerHub...'
+                echo "📤 Pushing image to DockerHub..."
                 withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         eval $(minikube -p minikube docker-env)
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${FULL_IMAGE_NAME}
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${FULL_IMAGE_NAME}
+                        docker push $DOCKER_USER/${IMAGE_NAME}:${IMAGE_TAG}
                     '''
                 }
             }
@@ -52,31 +52,26 @@ pipeline {
 
         stage('Deploy to Minikube') {
             steps {
-                echo '🚀 Deploying to Kubernetes...'
+                echo "🚀 Deploying to Minikube..."
                 sh '''
-                    kubectl apply -f k8s/namespace.yaml
-                    kubectl apply -f k8s/configmap.yaml -n my-kube-namespace
-                    kubectl apply -f k8s/redis-deployment.yaml -n my-kube-namespace
-                    kubectl apply -f k8s/redis-service.yaml -n my-kube-namespace
-                    kubectl apply -f k8s/deployment.yaml -n my-kube-namespace
-                    kubectl apply -f k8s/service.yaml -n my-kube-namespace
+                    kubectl apply -n ${KUBE_NAMESPACE} -f k8s/
                 '''
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                echo '🔎 Verifying Kubernetes deployment...'
+                echo "🔎 Verifying Kubernetes deployment..."
                 sh '''
-                    kubectl get pods -n my-kube-namespace -o wide
-                    kubectl get svc -n my-kube-namespace
+                    kubectl get pods -n ${KUBE_NAMESPACE} -o wide
+                    kubectl get svc -n ${KUBE_NAMESPACE}
                 '''
             }
         }
 
         stage('Run Smoke Test') {
             steps {
-                echo '🧪 Running smoke test...'
+                echo "🧪 Running smoke test on deployed service..."
                 sh './test.sh'
             }
         }
@@ -84,7 +79,7 @@ pipeline {
 
     post {
         success {
-            echo '✅ Pipeline completed successfully!'
+            echo '✅ Jenkins pipeline completed successfully.'
         }
         failure {
             echo '❌ Jenkins pipeline failed. Please review the logs above.'
