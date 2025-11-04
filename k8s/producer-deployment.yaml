@@ -13,7 +13,6 @@ spec:
         app: redis-producer
     spec:
       containers:
-        - name: redis-producer
-          image: redis:7
-          command: ["sh", "-c", 'while true; do echo "PUBLISH test Hello from Producer" | redis-cli -h redis-service; sleep 5; done']
+      - name: redis-producer
+        image: redis-producer:v1
 
