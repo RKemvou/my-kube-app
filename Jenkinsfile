@@ -10,37 +10,46 @@ pipeline {
     stages {
         stage('Clone Repo') {
             steps {
-                git branch: 'main', url: 'https://github.com/RKemvou/my-kube-app.git'
+                checkout scm  // Shows properly instead of git inside sh
             }
         }
 
         stage('Build Docker Image') {
             steps {
-                echo "Building Docker image for producer..."
-                sh 'eval $(minikube docker-env) && docker build -t $IMAGE_NAME:$IMAGE_TAG .'
+                script {
+                    echo "🔥 Building Docker image..."
+                    sh '''
+                        eval $(minikube docker-env)
+                        docker build -t $IMAGE_NAME:$IMAGE_TAG .
+                    '''
+                }
             }
         }
 
         stage('Verify Docker Image') {
             steps {
-                echo "Listing images to verify build"
-                sh 'eval $(minikube docker-env) && docker images'
+                echo "📦 Verifying Docker image..."
+                sh '''
+                    eval $(minikube docker-env)
+                    docker images | grep $IMAGE_NAME
+                '''
             }
         }
 
         stage('Apply Kubernetes YAMLs') {
             steps {
-                echo "Deploying to Minikube..."
+                echo "🚀 Deploying to Minikube..."
                 sh 'kubectl apply -f k8s/'
             }
         }
 
         stage('Verify Deployment') {
             steps {
-                echo "Pods:"
-                sh 'kubectl get pods -o wide'
-                echo "Services:"
-                sh 'kubectl get svc'
+                echo "🔍 Checking Kubernetes resources..."
+                sh '''
+                    kubectl get pods -o wide
+                    kubectl get svc
+                '''
             }
         }
     }
@@ -50,7 +59,7 @@ pipeline {
             echo '✅ Deployment successful!'
         }
         failure {
-            echo '❌ Something went wrong!'
+            echo '❌ Something went wrong during the pipeline!'
         }
     }
 }
