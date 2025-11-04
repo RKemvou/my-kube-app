@@ -2,20 +2,23 @@
 
 set -e
 
+# Define endpoint (adjust port if needed)
+NODE_PORT=30082
+ENDPOINT="http://$(minikube ip):${NODE_PORT}"
+
 echo "🔍 Waiting for service to become available..."
-sleep 10  # give time for pods to start
+sleep 10
 
-NODE_PORT=$(kubectl get svc nginx-service -n my-kube-namespace -o jsonpath='{.spec.ports[0].nodePort}')
-MINIKUBE_IP=$(minikube ip)
-URL="http://$MINIKUBE_IP:$NODE_PORT"
+echo "🔗 Testing endpoint: ${ENDPOINT}"
 
-echo "🔗 Testing endpoint: $URL"
-HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" "$URL")
+# Call the service
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "${ENDPOINT}")
 
-if [ "$HTTP_STATUS" -eq 200 ]; then
-  echo "✅ Application responded with 200 OK!"
+if [ "$RESPONSE" -eq 200 ]; then
+  echo "✅ Smoke test passed!"
+  exit 0
 else
-  echo "❌ Application did not respond correctly. Status: $HTTP_STATUS"
+  echo "❌ Smoke test failed with response code: $RESPONSE"
   exit 1
 fi
 
