@@ -5,13 +5,11 @@ pipeline {
         IMAGE_NAME = "redis-producer"
         IMAGE_TAG = "v1"
         KUBE_NAMESPACE = "my-kube-namespace"
+        SERVICE_URL = "http://192.168.49.2:30082"
     }
 
     stages {
 
-        // -----------------------------
-        // Stage 1: Build Docker Image
-        // -----------------------------
         stage('Build Docker Image') {
             steps {
                 echo "🔨 Building Docker image: ${IMAGE_NAME}:${IMAGE_TAG}"
@@ -22,9 +20,6 @@ pipeline {
             }
         }
 
-        // -----------------------------
-        // Stage 2: Verify Docker Image
-        // -----------------------------
         stage('Verify Docker Image') {
             steps {
                 echo '🔍 Listing Docker images to confirm build...'
@@ -35,9 +30,6 @@ pipeline {
             }
         }
 
-        // -----------------------------
-        // Stage 3: Deploy to Minikube
-        // -----------------------------
         stage('Deploy to Minikube') {
             steps {
                 echo '🚀 Deploying to Kubernetes via kubectl apply...'
@@ -52,9 +44,6 @@ pipeline {
             }
         }
 
-        // -----------------------------
-        // Stage 4: Verify Deployment
-        // -----------------------------
         stage('Verify Deployment') {
             steps {
                 echo '🔎 Verifying pod and service status...'
@@ -65,13 +54,19 @@ pipeline {
             }
         }
 
-        // -----------------------------
-        // Stage 5: Smoke Test
-        // -----------------------------
         stage('Run Smoke Test') {
             steps {
                 echo '🧪 Running smoke test...'
-                sh './test.sh'
+                sh '''
+                    echo "🔍 Waiting for service to become available..."
+                    sleep 10
+                    echo "🔗 Testing endpoint: ${SERVICE_URL}"
+                    for i in {1..5}; do
+                        curl --fail ${SERVICE_URL} && exit 0 || echo "Retry #$i failed..."; sleep 5;
+                    done
+                    echo "❌ Smoke test failed after 5 attempts."
+                    exit 1
+                '''
             }
         }
     }
