@@ -8,21 +8,13 @@ pipeline {
     }
 
     stages {
-        stage('Clone Repo') {
-            steps {
-                checkout scm  // Shows properly instead of git inside sh
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
-                script {
-                    echo "🔥 Building Docker image..."
-                    sh '''
-                        eval $(minikube docker-env)
-                        docker build -t $IMAGE_NAME:$IMAGE_TAG .
-                    '''
-                }
+                echo "🔥 Building Docker image..."
+                sh '''
+                    eval $(minikube docker-env)
+                    docker build -t $IMAGE_NAME:$IMAGE_TAG .
+                '''
             }
         }
 
@@ -59,7 +51,7 @@ pipeline {
             echo '✅ Deployment successful!'
         }
         failure {
-            echo '❌ Something went wrong during the pipeline!'
+            echo '❌ Something went wrong!'
         }
     }
 }
