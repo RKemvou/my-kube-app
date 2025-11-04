@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-producer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis-producer
+  template:
+    metadata:
+      labels:
+        app: redis-producer
+    spec:
+      containers:
+        - name: redis-producer
+          image: redis:7
+          command: ["sh", "-c", 'while true; do echo "PUBLISH test Hello from Producer" | redis-cli -h redis-service; sleep 5; done']
+
