@@ -9,13 +9,6 @@ pipeline {
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                echo "📥 Cloning repository..."
-                git 'https://github.com/RKemvou/my-kube-app.git'
-            }
-        }
-
         stage('Build Docker Image') {
             steps {
                 echo "🔨 Building Docker image for ${IMAGE_NAME}:${IMAGE_TAG}..."
@@ -47,9 +40,7 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 echo "🔍 Verifying resources in namespace $NAMESPACE"
-                sh '''
-                    kubectl get all -n $NAMESPACE
-                '''
+                sh 'kubectl get all -n $NAMESPACE'
             }
         }
     }
