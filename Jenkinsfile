@@ -4,9 +4,7 @@ pipeline {
     environment {
         IMAGE_NAME = "redis-producer"
         IMAGE_TAG = "v1"
-        DOCKERHUB_USER = "kemvouachille"
-        DOCKER_USER = credentials('docker-credentials-username') // Add this credential in Jenkins
-        DOCKER_PASS = credentials('docker-credentials-password') // Add this credential in Jenkins
+        DOCKERHUB_USER = "patterson2014"
     }
 
     stages {
@@ -40,15 +38,12 @@ pipeline {
         stage('Push to DockerHub') {
             steps {
                 echo '📤 Pushing image to DockerHub...'
-                withCredentials([
-                    string(credentialsId: 'docker-credentials-username', variable: 'DOCKER_USER'),
-                    string(credentialsId: 'docker-credentials-password', variable: 'DOCKER_PASS')
-                ]) {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         eval $(minikube -p minikube docker-env)
-                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker tag ${IMAGE_NAME}:${IMAGE_TAG} ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                         echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
-                        docker push ${DOCKERHUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
+                        docker push ${DOCKER_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                     '''
                 }
             }
@@ -68,19 +63,19 @@ pipeline {
             steps {
                 echo '✅ Verifying Kubernetes deployment...'
                 sh '''
-                    kubectl get pods
-                    kubectl get svc
+                    kubectl get pods -A
+                    kubectl get svc -A
                 '''
             }
         }
     }
 
     post {
-        failure {
-            echo '❌ Jenkins pipeline failed. Please review the logs above.'
-        }
         success {
             echo '✅ Jenkins pipeline completed successfully!'
+        }
+        failure {
+            echo '❌ Jenkins pipeline failed. Please review the logs above.'
         }
     }
 }
