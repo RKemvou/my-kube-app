@@ -1,8 +1,10 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: app-config
+  name: producer-config
   namespace: my-kube-namespace
 data:
-  REDIS_HOST: redis
+  REDIS_HOST: redis-service
+  REDIS_PORT: "6379"
+  TOPIC_NAME: test-topic
 

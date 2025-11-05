@@ -1,8 +1,8 @@
-# k8s/producer-deployment.yaml
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis-producer
+  namespace: my-kube-namespace
 spec:
   replicas: 1
   selector:
@@ -14,9 +14,11 @@ spec:
         app: redis-producer
     spec:
       containers:
-      - name: redis-producer
-        image: redis-producer:v1
-        imagePullPolicy: IfNotPresent
-        ports:
-        - containerPort: 80
+        - name: redis-producer
+          image: patterson2014/redis-producer:v1
+          ports:
+            - containerPort: 5000
+          envFrom:
+            - configMapRef:
+                name: producer-config
 

@@ -1,11 +1,16 @@
-# producer.py
-import redis
+import os
 import time
+import redis
 
-r = redis.Redis(host='redis-service', port=6379)
+redis_host = os.getenv('REDIS_HOST', 'localhost')
+redis_port = int(os.getenv('REDIS_PORT', 6379))
+topic = os.getenv('TOPIC_NAME', 'test-topic')
+
+r = redis.Redis(host=redis_host, port=redis_port)
 
 while True:
-    r.lpush("messages", "Hello from producer!")
-    print("✅ Message sent to Redis queue")
+    msg = f"Hello from producer at {time.time()}"
+    r.publish(topic, msg)
+    print(f"Published: {msg}")
     time.sleep(5)
 

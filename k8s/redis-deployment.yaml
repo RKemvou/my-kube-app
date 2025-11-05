@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: redis
+  namespace: my-kube-namespace
 spec:
   replicas: 1
   selector:
@@ -14,7 +15,7 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:7
+          image: redis:alpine
           ports:
             - containerPort: 6379
 

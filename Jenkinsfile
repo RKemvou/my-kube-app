@@ -5,6 +5,7 @@ pipeline {
         IMAGE_NAME = "redis-producer"
         IMAGE_TAG = "v1"
         DOCKERHUB_USER = "patterson2014"
+        KUBE_NAMESPACE = "my-kube-namespace"
     }
 
     stages {
@@ -27,7 +28,6 @@ pipeline {
 
         stage('Verify Docker Image') {
             steps {
-                echo '🔍 Verifying Docker image exists...'
                 sh '''
                     eval $(minikube -p minikube docker-env)
                     docker images | grep ${IMAGE_NAME}
@@ -37,7 +37,6 @@ pipeline {
 
         stage('Push to DockerHub') {
             steps {
-                echo '📤 Pushing image to DockerHub...'
                 withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USER', passwordVariable: 'DOCKER_PASS')]) {
                     sh '''
                         eval $(minikube -p minikube docker-env)
@@ -49,11 +48,11 @@ pipeline {
             }
         }
 
-        stage('Deploy to Minikube') {
+        stage('Deploy to Kubernetes') {
             steps {
-                echo '🚀 Deploying to Minikube...'
                 sh '''
                     eval $(minikube -p minikube docker-env)
+                    kubectl apply -f k8s/namespace.yaml
                     kubectl apply -f k8s/
                 '''
             }
@@ -61,10 +60,9 @@ pipeline {
 
         stage('Verify Deployment') {
             steps {
-                echo '✅ Verifying Kubernetes deployment...'
                 sh '''
-                    kubectl get pods -A
-                    kubectl get svc -A
+                    kubectl get pods -n ${KUBE_NAMESPACE}
+                    kubectl get svc -n ${KUBE_NAMESPACE}
                 '''
             }
         }
@@ -75,7 +73,7 @@ pipeline {
             echo '✅ Jenkins pipeline completed successfully!'
         }
         failure {
-            echo '❌ Jenkins pipeline failed. Please review the logs above.'
+            echo '❌ Jenkins pipeline failed. Please check logs.'
         }
     }
 }

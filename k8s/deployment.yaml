@@ -1,25 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: producer
+  name: my-kube-app
   namespace: my-kube-namespace
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: producer
+      app: my-kube-app
   template:
     metadata:
       labels:
-        app: producer
+        app: my-kube-app
     spec:
       containers:
-      - name: producer
-        image: redis-producer:v1
-        env:
-        - name: REDIS_HOST
-          valueFrom:
-            configMapKeyRef:
-              name: app-config
-              key: REDIS_HOST
+        - name: my-kube-app
+          image: nginx
+          ports:
+            - containerPort: 80
 
